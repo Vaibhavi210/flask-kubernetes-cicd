@@ -1,0 +1,43 @@
+pipeline {
+  agent any
+
+  environment {
+    DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials') // Jenkins credentials ID
+    IMAGE_NAME = 'vaibhavi210/flask-app'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git 'https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git'
+      }
+    }
+
+    stage('Build Docker Image') {
+      steps {
+        sh 'docker build -t $IMAGE_NAME:$BUILD_NUMBER .'
+      }
+    }
+
+    stage('Login to Docker Hub') {
+      steps {
+        sh "echo $DOCKER_HUB_CREDENTIALS_PSW | docker login -u $DOCKER_HUB_CREDENTIALS_USR --password-stdin"
+      }
+    }
+
+    stage('Push to Docker Hub') {
+      steps {
+        sh 'docker push $IMAGE_NAME:$BUILD_NUMBER'
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      steps {
+        sh '''
+        kubectl set image deployment/flask-app flask-app=$IMAGE_NAME:$BUILD_NUMBER
+        kubectl rollout status deployment/flask-app
+        '''
+      }
+    }
+  }
+}
