@@ -1,0 +1,5 @@
+# Ignore terraform binaries and local state
+terraform/.terraform/
+terraform/*.exe
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
