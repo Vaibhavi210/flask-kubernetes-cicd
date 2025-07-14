@@ -90,7 +90,17 @@ stage('Deploy to EKS') {
         ]]) {
             script {
                 sh '''
-                   
+                    if ! command -v kubectl &> /dev/null; then
+                echo "Installing kubectl..."
+                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                chmod +x kubectl
+                mkdir -p $HOME/bin
+                mv kubectl $HOME/bin/kubectl
+                export PATH=$HOME/bin:$PATH
+            else
+                echo "✅ kubectl already installed"
+            fi
+            kubectl version --client
 
                     # Use safe temp home to avoid kubeconfig corruption
                     export HOME=/tmp
