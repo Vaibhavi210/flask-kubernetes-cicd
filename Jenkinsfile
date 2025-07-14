@@ -80,21 +80,16 @@ pipeline {
 }
 
 
-       stage('Deploy to EKS') {
+      stage('Deploy to EKS') {
     steps {
         echo "☸️ Deploying to EKS cluster..."
-        withCredentials([
-            [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']
-        ]) {
+        withAWS(credentials: 'aws-creds', region: "${AWS_DEFAULT_REGION}") {
             script {
                 sh '''
-                    # Configure kubectl for EKS
+                    # Update kubeconfig for EKS
                     aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $EKS_CLUSTER_NAME
                     
-                    # Verify connection
-                    kubectl get nodes
-                    
-                    # Check if deployment exists
+                    # Check deployment
                     if kubectl get deployment flask-app > /dev/null 2>&1; then
                         echo "📝 Updating existing deployment..."
                         kubectl set image deployment/flask-app flask-app=$DOCKERHUB_USER/$IMAGE_NAME:$BUILD_NUMBER
@@ -110,11 +105,9 @@ pipeline {
                     kubectl get deployment flask-app
                     kubectl get service flask-app
                     kubectl get pods -l app=flask-app
-                    
+
                     echo "🌐 Application URL:"
                     kubectl get service flask-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' && echo ":5000"
-                    
-                    echo "✅ Deployment completed successfully"
                 '''
             }
         }
