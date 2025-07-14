@@ -16,13 +16,20 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Fix Docker Permissions & Build') {
             steps {
-                echo "🏗️ Building Docker image..."
+                echo "🔧 Fixing Docker permissions and building image..."
                 script {
                     try {
-                        sh 'docker build -t $IMAGE_NAME:latest .'
-                        sh 'docker images | grep $IMAGE_NAME'
+                        sh '''
+                            # Try to fix Docker permissions
+                            sudo chown root:docker /var/run/docker.sock || true
+                            sudo chmod 666 /var/run/docker.sock || true
+                            
+                            # Build Docker image
+                            docker build -t $IMAGE_NAME:latest .
+                            docker images | grep $IMAGE_NAME
+                        '''
                         echo "✅ Docker image built successfully"
                     } catch (Exception e) {
                         error "❌ Docker build failed: ${e.getMessage()}"
