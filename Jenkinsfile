@@ -1,33 +1,24 @@
 pipeline {
-    agent none
+    agent any
     
     environment {
         DOCKERHUB_USER = 'vaibhavi210'
         IMAGE_NAME = 'flask-app'
-        AWS_DEFAULT_REGION = 'ap-south-1' 
-        EKS_CLUSTER_NAME = 'devops-cluster'  
+        AWS_DEFAULT_REGION = 'ap-south-1'  // ✅ Update to your region
+        EKS_CLUSTER_NAME = 'devops-cluster'  // ✅ Update to your cluster name
     }
 
     stages {
         stage('Checkout') {
-            agent any
             steps {
                 echo "🔄 Checking out source code..."
                 git branch: 'main', url: 'https://github.com/Vaibhavi210/flask-kubernetes-cicd.git'
-                stash includes: '**', name: 'source'
             }
         }
 
         stage('Build Docker Image') {
-            agent {
-                docker {
-                    image 'docker:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
             steps {
                 echo "🏗️ Building Docker image..."
-                unstash 'source'
                 script {
                     try {
                         sh 'docker build -t $IMAGE_NAME:latest .'
@@ -41,12 +32,6 @@ pipeline {
         }
 
         stage('Push to DockerHub') {
-            agent {
-                docker {
-                    image 'docker:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
             steps {
                 echo "🚀 Pushing image to DockerHub..."
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
@@ -68,13 +53,31 @@ pipeline {
             }
         }
 
-        stage('Deploy to EKS') {
-            agent {
-                docker {
-                    image 'amazon/aws-cli:latest'
-                    args '--entrypoint=""'
+        stage('Install kubectl') {
+            steps {
+                echo "📦 Installing kubectl..."
+                script {
+                    try {
+                        sh '''
+                            # Check if kubectl is already installed
+                            if ! command -v kubectl &> /dev/null; then
+                                echo "Installing kubectl..."
+                                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                                chmod +x kubectl
+                                sudo mv kubectl /usr/local/bin/
+                            else
+                                echo "kubectl already installed"
+                            fi
+                            kubectl version --client
+                        '''
+                    } catch (Exception e) {
+                        error "❌ kubectl installation failed: ${e.getMessage()}"
+                    }
                 }
             }
+        }
+
+        stage('Deploy to EKS') {
             steps {
                 echo "☸️ Deploying to EKS cluster..."
                 withCredentials([
@@ -83,11 +86,6 @@ pipeline {
                     script {
                         try {
                             sh '''
-                                # Install kubectl
-                                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-                                chmod +x kubectl
-                                mv kubectl /usr/local/bin/
-                                
                                 # Configure kubectl for EKS
                                 aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $EKS_CLUSTER_NAME
                                 
@@ -107,9 +105,14 @@ pipeline {
                                 fi
                                 
                                 # Get deployment info
+                                echo "📊 Deployment Status:"
                                 kubectl get deployment flask-app
                                 kubectl get service flask-app
                                 kubectl get pods -l app=flask-app
+                                
+                                # Get LoadBalancer URL
+                                echo "🌐 Application URL:"
+                                kubectl get service flask-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' && echo ":5000"
                                 
                                 echo "✅ Deployment completed successfully"
                             '''
@@ -125,23 +128,26 @@ pipeline {
     post {
         always {
             echo "🧹 Cleaning up..."
-            node {
-                // Clean up Docker images to save space
-                sh '''
-                    docker rmi $DOCKERHUB_USER/$IMAGE_NAME:latest || true
-                    docker rmi $DOCKERHUB_USER/$IMAGE_NAME:$BUILD_NUMBER || true
-                    docker rmi $IMAGE_NAME:latest || true
-                    docker system prune -f || true
-                '''
+            script {
+                try {
+                    sh '''
+                        # Clean up Docker images to save space
+                        docker rmi $DOCKERHUB_USER/$IMAGE_NAME:latest || true
+                        docker rmi $DOCKERHUB_USER/$IMAGE_NAME:$BUILD_NUMBER || true
+                        docker rmi $IMAGE_NAME:latest || true
+                        docker system prune -f || true
+                    '''
+                } catch (Exception e) {
+                    echo "⚠️ Cleanup warning: ${e.getMessage()}"
+                }
             }
         }
         success {
             echo "🎉 Pipeline completed successfully!"
-            // You can add notifications here (Slack, email, etc.)
+            echo "🌐 Your Flask app should be accessible via the LoadBalancer URL shown above"
         }
         failure {
-            echo "💥 Pipeline failed!"
-            // You can add failure notifications here
+            echo "💥 Pipeline failed! Check the logs above for details."
         }
     }
 }
