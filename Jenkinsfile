@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = 'your-dockerhub-username'
+        DOCKERHUB_USER = 'vaibhavi210'   // ✅ REPLACE with your actual DockerHub username
         IMAGE_NAME = 'flask-app'
     }
 
@@ -15,9 +15,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                docker build -t $IMAGE_NAME:latest .
-                '''
+                sh 'docker build -t $IMAGE_NAME:latest .'
             }
         }
 
@@ -25,9 +23,9 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     sh '''
-                    echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
-                    docker tag $IMAGE_NAME:latest $DOCKERHUB_USER/$IMAGE_NAME:latest
-                    docker push $DOCKERHUB_USER/$IMAGE_NAME:latest
+                        echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
+                        docker tag $IMAGE_NAME:latest $DOCKERHUB_USER/$IMAGE_NAME:latest
+                        docker push $DOCKERHUB_USER/$IMAGE_NAME:latest
                     '''
                 }
             }
@@ -36,8 +34,8 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 sh '''
-                kubectl set image deployment/flask-app flask-app=$DOCKERHUB_USER/$IMAGE_NAME:latest
-                kubectl rollout status deployment/flask-app
+                    kubectl set image deployment/flask-app flask-app=$DOCKERHUB_USER/$IMAGE_NAME:latest
+                    kubectl rollout status deployment/flask-app
                 '''
             }
         }
