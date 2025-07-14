@@ -142,7 +142,7 @@ pipeline {
                         docker rmi $DOCKERHUB_USER/$IMAGE_NAME:latest || true
                         docker rmi $DOCKERHUB_USER/$IMAGE_NAME:$BUILD_NUMBER || true
                         docker rmi $IMAGE_NAME:latest || true
-                        docker system prune -f || true
+                        docker container prune -f || true
                     '''
                 } catch (Exception e) {
                     echo "⚠️ Cleanup warning: ${e.getMessage()}"
