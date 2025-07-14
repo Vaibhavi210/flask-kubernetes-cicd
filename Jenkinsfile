@@ -80,52 +80,47 @@ pipeline {
 }
 
 
-        stage('Deploy to EKS') {
-            steps {
-                echo "☸️ Deploying to EKS cluster..."
-                withCredentials([
-                    aws(credentialsId: 'aws-creds', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    script {
-                        try {
-                            sh '''
-                                # Configure kubectl for EKS
-                                aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $EKS_CLUSTER_NAME
-                                
-                                # Verify connection
-                                kubectl get nodes
-                                
-                                # Check if deployment exists
-                                if kubectl get deployment flask-app > /dev/null 2>&1; then
-                                    echo "📝 Updating existing deployment..."
-                                    kubectl set image deployment/flask-app flask-app=$DOCKERHUB_USER/$IMAGE_NAME:$BUILD_NUMBER
-                                    kubectl rollout status deployment/flask-app --timeout=300s
-                                else
-                                    echo "🆕 Creating new deployment..."
-                                    kubectl create deployment flask-app --image=$DOCKERHUB_USER/$IMAGE_NAME:$BUILD_NUMBER
-                                    kubectl expose deployment flask-app --port=5000 --type=LoadBalancer
-                                    kubectl rollout status deployment/flask-app --timeout=300s
-                                fi
-                                
-                                # Get deployment info
-                                echo "📊 Deployment Status:"
-                                kubectl get deployment flask-app
-                                kubectl get service flask-app
-                                kubectl get pods -l app=flask-app
-                                
-                                # Get LoadBalancer URL
-                                echo "🌐 Application URL:"
-                                kubectl get service flask-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' && echo ":5000"
-                                
-                                echo "✅ Deployment completed successfully"
-                            '''
-                        } catch (Exception e) {
-                            error "❌ EKS deployment failed: ${e.getMessage()}"
-                        }
-                    }
-                }
+       stage('Deploy to EKS') {
+    steps {
+        echo "☸️ Deploying to EKS cluster..."
+        withCredentials([
+            [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']
+        ]) {
+            script {
+                sh '''
+                    # Configure kubectl for EKS
+                    aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $EKS_CLUSTER_NAME
+                    
+                    # Verify connection
+                    kubectl get nodes
+                    
+                    # Check if deployment exists
+                    if kubectl get deployment flask-app > /dev/null 2>&1; then
+                        echo "📝 Updating existing deployment..."
+                        kubectl set image deployment/flask-app flask-app=$DOCKERHUB_USER/$IMAGE_NAME:$BUILD_NUMBER
+                        kubectl rollout status deployment/flask-app --timeout=300s
+                    else
+                        echo "🆕 Creating new deployment..."
+                        kubectl create deployment flask-app --image=$DOCKERHUB_USER/$IMAGE_NAME:$BUILD_NUMBER
+                        kubectl expose deployment flask-app --port=5000 --type=LoadBalancer
+                        kubectl rollout status deployment/flask-app --timeout=300s
+                    fi
+                    
+                    echo "📊 Deployment Status:"
+                    kubectl get deployment flask-app
+                    kubectl get service flask-app
+                    kubectl get pods -l app=flask-app
+                    
+                    echo "🌐 Application URL:"
+                    kubectl get service flask-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' && echo ":5000"
+                    
+                    echo "✅ Deployment completed successfully"
+                '''
             }
         }
+    }
+}
+
     }
 
     post {
