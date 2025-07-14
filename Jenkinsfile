@@ -79,17 +79,33 @@ pipeline {
     }
 }
 
-
-      stage('Deploy to EKS') {
+stage('Deploy to EKS') {
     steps {
         echo "☸️ Deploying to EKS cluster..."
-        withAWS(credentials: 'aws-creds', region: "${AWS_DEFAULT_REGION}") {
+        withCredentials([[
+            $class: 'AmazonWebServicesCredentialsBinding',
+            accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
+            credentialsId: 'aws-creds'
+        ]]) {
             script {
                 sh '''
-                    # Update kubeconfig for EKS
+                    # Ensure kubectl is available
+                    if ! command -v kubectl &> /dev/null; then
+                        echo "🔧 Installing kubectl..."
+                        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                        chmod +x kubectl
+                        mv kubectl /usr/local/bin/
+                    fi
+
+                    # Use safe temp home to avoid kubeconfig corruption
+                    export HOME=/tmp
+                    mkdir -p $HOME/.kube
+
+                    echo "🔗 Updating kubeconfig for EKS cluster..."
                     aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $EKS_CLUSTER_NAME
-                    
-                    # Check deployment
+
+                    echo "🔍 Checking if deployment exists..."
                     if kubectl get deployment flask-app > /dev/null 2>&1; then
                         echo "📝 Updating existing deployment..."
                         kubectl set image deployment/flask-app flask-app=$DOCKERHUB_USER/$IMAGE_NAME:$BUILD_NUMBER
@@ -100,7 +116,7 @@ pipeline {
                         kubectl expose deployment flask-app --port=5000 --type=LoadBalancer
                         kubectl rollout status deployment/flask-app --timeout=300s
                     fi
-                    
+
                     echo "📊 Deployment Status:"
                     kubectl get deployment flask-app
                     kubectl get service flask-app
@@ -113,6 +129,7 @@ pipeline {
         }
     }
 }
+
 
     }
 
