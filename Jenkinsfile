@@ -61,21 +61,24 @@ pipeline {
         }
 
         stage('Install kubectl') {
-            steps {
-                echo '📦 Installing kubectl if not present...'
-                sh '''
-                    if ! command -v kubectl &> /dev/null; then
-                        echo "Installing kubectl..."
-                        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-                        chmod +x kubectl
-                        mv kubectl /usr/local/bin/kubectl
-                    else
-                        echo "✅ kubectl already installed"
-                    fi
-                    kubectl version --client
-                '''
-            }
-        }
+    steps {
+        echo '📦 Installing kubectl if not present...'
+        sh '''
+            if ! command -v kubectl &> /dev/null; then
+                echo "Installing kubectl..."
+                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                chmod +x kubectl
+                mkdir -p $HOME/bin
+                mv kubectl $HOME/bin/kubectl
+                export PATH=$HOME/bin:$PATH
+            else
+                echo "✅ kubectl already installed"
+            fi
+            kubectl version --client
+        '''
+    }
+}
+
 
         stage('Deploy to EKS') {
             steps {
