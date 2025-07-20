@@ -4,8 +4,8 @@ pipeline {
     environment {
         DOCKERHUB_USER = 'vaibhavi210'
         IMAGE_NAME = 'flask-app'
-        AWS_DEFAULT_REGION = 'ap-south-1'  // ✅ Update to your region
-        EKS_CLUSTER_NAME = 'devops-cluster'  // ✅ Update to your cluster name
+        AWS_DEFAULT_REGION = 'ap-south-1'  
+        EKS_CLUSTER_NAME = 'devops-cluster'  
     }
 
     stages {
@@ -30,9 +30,9 @@ pipeline {
                             docker build -t $IMAGE_NAME:latest .
                             docker images | grep $IMAGE_NAME
                         '''
-                        echo "✅ Docker image built successfully"
+                        echo " Docker image built successfully"
                     } catch (Exception e) {
-                        error "❌ Docker build failed: ${e.getMessage()}"
+                        error " Docker build failed: ${e.getMessage()}"
                     }
                 }
             }
@@ -40,7 +40,7 @@ pipeline {
 
         stage('Push to DockerHub') {
             steps {
-                echo "🚀 Pushing image to DockerHub..."
+                echo " Pushing image to DockerHub..."
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     script {
                         try {
@@ -50,10 +50,10 @@ pipeline {
                                 docker tag $IMAGE_NAME:latest $DOCKERHUB_USER/$IMAGE_NAME:$BUILD_NUMBER
                                 docker push $DOCKERHUB_USER/$IMAGE_NAME:latest
                                 docker push $DOCKERHUB_USER/$IMAGE_NAME:$BUILD_NUMBER
-                                echo "✅ Image pushed successfully"
+                                echo "Image pushed successfully"
                             '''
                         } catch (Exception e) {
-                            error "❌ Docker push failed: ${e.getMessage()}"
+                            error " Docker push failed: ${e.getMessage()}"
                         }
                     }
                 }
@@ -62,7 +62,7 @@ pipeline {
 
         stage('Install kubectl') {
     steps {
-        echo '📦 Installing kubectl if not present...'
+        echo ' Installing kubectl if not present...'
         sh '''
             if ! command -v kubectl &> /dev/null; then
                 echo "Installing kubectl..."
@@ -72,7 +72,7 @@ pipeline {
                 mv kubectl $HOME/bin/kubectl
                 export PATH=$HOME/bin:$PATH
             else
-                echo "✅ kubectl already installed"
+                echo "kubectl already installed"
             fi
             kubectl version --client
         '''
@@ -81,7 +81,7 @@ pipeline {
 
 stage('Deploy to EKS') {
     steps {
-        echo "☸️ Deploying to EKS cluster..."
+        echo " Deploying to EKS cluster..."
         withCredentials([[
             $class: 'AmazonWebServicesCredentialsBinding',
             accessKeyVariable: 'AWS_ACCESS_KEY_ID',
@@ -98,7 +98,7 @@ stage('Deploy to EKS') {
                 mv kubectl $HOME/bin/kubectl
                 export PATH=$HOME/bin:$PATH
             else
-                echo "✅ kubectl already installed"
+                echo " kubectl already installed"
             fi
             kubectl version --client
 
@@ -156,10 +156,10 @@ stage('Deploy to EKS') {
         }
         success {
             echo "🎉 Pipeline completed successfully!"
-            echo "🌐 Your Flask app should be accessible via the LoadBalancer URL shown above"
+            echo " Your Flask app should be accessible via the LoadBalancer URL shown above"
         }
         failure {
-            echo "💥 Pipeline failed! Check the logs above for details."
+            echo " Pipeline failed! Check the logs above for details."
         }
     }
 }

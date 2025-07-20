@@ -104,7 +104,7 @@ Deletes all AWS resources to avoid billing.
 
 ## 📸 Screenshots
 
-> You can add:
+
 
 * `kubectl get pods` output
 ![alt text](<Screenshot 2025-07-14 200039.png>)

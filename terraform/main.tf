@@ -200,7 +200,7 @@ resource "aws_security_group_rule" "cluster_to_node_api" {
   security_group_id        = aws_security_group.eks_cluster_sg.id
 }
 
-# IAM Roles (your existing roles are correct)
+# IAM Roles 
 resource "aws_iam_role" "eks_cluster" {
   name = "eks-cluster-role"
 
@@ -302,7 +302,7 @@ resource "aws_eks_node_group" "main" {
   ]
 }
 
-# Key pair for SSH access (optional but recommended for troubleshooting)
+# Key pair for SSH access ( recommended for troubleshooting)
 resource "tls_private_key" "worker_key" {
   algorithm = "RSA"
   rsa_bits  = 4096
