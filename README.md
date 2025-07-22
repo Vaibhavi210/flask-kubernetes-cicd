@@ -1,7 +1,7 @@
 
 # 🚀 End-to-End CI/CD Deployment of Flask App on AWS EKS
 
-This project demonstrates a full CI/CD pipeline to build, test, containerize, and deploy a simple Flask app to AWS EKS using Jenkins, Docker, and Terraform.
+This project demonstrates a full CI/CD pipeline to build, containerize, and deploy a simple Flask app to AWS EKS using Jenkins, Docker, and Terraform.
 
 ---
 
@@ -10,7 +10,7 @@ This project demonstrates a full CI/CD pipeline to build, test, containerize, an
 | Category          | Tools Used                                   |
 |------------------|----------------------------------------------|
 | CI/CD            | Jenkins, Docker Hub                          |
-| Containerization | Docker, Docker Compose                       |
+| Containerization | Docker                       |
 | Cloud            | AWS (EKS, EC2, VPC, Subnets, IAM)            |
 | Infrastructure   | Terraform                                     |
 | Kubernetes       | EKS, kubectl, LoadBalancer Service           |
@@ -41,7 +41,7 @@ v
 
 - A `Dockerfile` defines the app runtime
 - Tagged and pushed as `vaibhavi210/flask-app:<build-number>`
-- Docker Compose used for local multi-container testing
+
 
 ---
 
@@ -49,9 +49,8 @@ v
 
 1. **Source Code Checkout** from GitHub
 2. **Docker Build & Push** to DockerHub using Jenkins
-3. **Infrastructure Provisioning** using Terraform
-4. **Kubernetes Deployment** with `kubectl`
-5. **LoadBalancer Service** exposes app on the internet
+3. **Kubernetes Deployment** with `kubectl`
+4. **LoadBalancer Service** exposes app on the internet
 
 ---
 
